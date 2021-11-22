@@ -21,39 +21,6 @@ services:
       - 1.1.1.1
     command: '-f "" -r 192.168.0.0/24 -r 172.0.0.0/8' # enable firewall and route local network traffic
 
-#  deluge:
-#    image: linuxserver/deluge:latest
-#    restart: unless-stopped
-#    network_mode: service:vpn # run on the vpn network
-#    environment:
-#      - PUID=${PUID} # default user id, defined in .env
-#      - PGID=${PGID} # default group id, defined in .env
-#      - TZ=${TZ} # timezone, defined in .env
-#    volumes:
-#      - ${MEDIA_ROOT}/downloads:/downloads # downloads folder
-#      - ${ROOT}/config/deluge:/config # config files
-#    depends_on:
-#      - vpn
-
-#  transmission:
-#    image: lscr.io/linuxserver/transmission
-#    network_mode: service:vpn
-#    environment:
-#      - PUID=${PUID}
-#      - PGID=${PGID}
-#      - TZ=${TZ}
-#      - TRANSMISSION_WEB_HOME=/flood-for-transmission/
-##      - WHITELIST=127.0.0.1,192.168.*.*
-#      - USER=admin
-#      - PASS=admin
-#    volumes:
-#      - ${ROOT}/config/transmission:/config
-#      - ${MEDIA_ROOT}/downloads:/downloads
-#      - ${MEDIA_ROOT}/downloads/torrent-blackhole:/watch
-#    depends_on:
-#      - vpn
-#    restart: unless-stopped
-
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent
     network_mode: service:vpn # run through vpn
@@ -153,3 +120,37 @@ services:
     ports:
       - "8789:80"
     restart: unless-stopped
+
+#  deluge:
+#    image: linuxserver/deluge:latest
+#    restart: unless-stopped
+#    network_mode: service:vpn # run on the vpn network
+#    environment:
+#      - PUID=${PUID} # default user id, defined in .env
+#      - PGID=${PGID} # default group id, defined in .env
+#      - TZ=${TZ} # timezone, defined in .env
+#    volumes:
+#      - ${MEDIA_ROOT}/downloads:/downloads # downloads folder
+#      - ${ROOT}/config/deluge:/config # config files
+#    depends_on:
+#      - vpn
+
+#  transmission:
+#    image: lscr.io/linuxserver/transmission
+#    network_mode: service:vpn
+#    environment:
+#      - PUID=${PUID}
+#      - PGID=${PGID}
+#      - TZ=${TZ}
+#      - TRANSMISSION_WEB_HOME=/flood-for-transmission/
+##      - WHITELIST=127.0.0.1,192.168.*.*
+#      - USER=admin
+#      - PASS=admin
+#    volumes:
+#      - ${ROOT}/config/transmission:/config
+#      - ${MEDIA_ROOT}/downloads:/downloads
+#      - ${MEDIA_ROOT}/downloads/torrent-blackhole:/watch
+#    depends_on:
+#      - vpn
+#    restart: unless-stopped
+
