@@ -12,7 +12,9 @@ services:
     security_opt:
       - label:disable
     ports:
-      - 8112:8112 # port for deluge web UI to be reachable from local network
+      - "8112:8112" # port for deluge web UI to be reachable from local network
+      - "52629:52629"
+      - "52629:52629/udp"
     dns:
       - 1.1.1.1
     command: '-f "" -r 192.168.0.0/24 -r 172.0.0.0/8' # enable firewall and route local network traffic
@@ -29,6 +31,8 @@ services:
     volumes:
       - ${MEDIA_ROOT}/downloads:/downloads # downloads folder
       - ${ROOT}/config/deluge:/config # config files
+    depends_on:
+      - vpn
 
   jackett:
     container_name: jackett
