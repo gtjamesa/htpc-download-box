@@ -11,8 +11,6 @@ services:
     security_opt:
       - label:disable
     ports:
-      #- "8112:8112" # deluge
-      #- "8112:9091" # transmission
       - "8112:8112" # qbittorrent
       - "52629:52629"
       - "52629:52629/udp"
@@ -130,37 +128,4 @@ services:
     ports:
       - "8191:8191"
     restart: unless-stopped
-
-#  deluge:
-#    image: linuxserver/deluge:latest
-#    restart: unless-stopped
-#    network_mode: service:vpn # run on the vpn network
-#    environment:
-#      - PUID=${PUID} # default user id, defined in .env
-#      - PGID=${PGID} # default group id, defined in .env
-#      - TZ=${TZ} # timezone, defined in .env
-#    volumes:
-#      - ${MEDIA_ROOT}/downloads:/downloads # downloads folder
-#      - ${ROOT}/config/deluge:/config # config files
-#    depends_on:
-#      - vpn
-
-#  transmission:
-#    image: lscr.io/linuxserver/transmission
-#    network_mode: service:vpn
-#    environment:
-#      - PUID=${PUID}
-#      - PGID=${PGID}
-#      - TZ=${TZ}
-#      - TRANSMISSION_WEB_HOME=/flood-for-transmission/
-##      - WHITELIST=127.0.0.1,192.168.*.*
-#      - USER=admin
-#      - PASS=admin
-#    volumes:
-#      - ${ROOT}/config/transmission:/config
-#      - ${MEDIA_ROOT}/downloads:/downloads
-#      - ${MEDIA_ROOT}/downloads/torrent-blackhole:/watch
-#    depends_on:
-#      - vpn
-#    restart: unless-stopped
 
