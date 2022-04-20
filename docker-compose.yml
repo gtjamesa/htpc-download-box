@@ -121,6 +121,16 @@ services:
       - "8789:80"
     restart: unless-stopped
 
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    environment:
+      - PUID=${PUID} # default user id, defined in .env
+      - PGID=${PGID} # default group id, defined in .env
+      - TZ=${TZ} # timezone, defined in .env
+    ports:
+      - "8191:8191"
+    restart: unless-stopped
+
 #  deluge:
 #    image: linuxserver/deluge:latest
 #    restart: unless-stopped
