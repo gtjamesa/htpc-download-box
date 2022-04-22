@@ -15,6 +15,7 @@ services:
       - "52629:52629"
       - "52629:52629/udp"
       - "9117:9117" # jackett
+      - "5800:5800" # firefox
     dns:
       - 1.1.1.1
     command: '-f "" -r 192.168.0.0/24 -r 172.0.0.0/8' # enable firewall and route local network traffic
@@ -128,4 +129,21 @@ services:
     ports:
       - "8191:8191"
     restart: unless-stopped
+
+  firefox:
+    image: jlesage/firefox
+    network_mode: service:vpn # run through vpn
+    environment:
+      - USER_ID=${PUID} # default user id, defined in .env
+      - GROUP_ID=${PGID} # default group id, defined in .env
+      - TZ=${TZ} # timezone, defined in .env
+      - KEEP_APP_RUNNING=1
+    volumes:
+      - ${ROOT}/config/bazarr:/config:rw
+#    ports:
+#      - "5800:5800"
+    depends_on:
+      - vpn
+    restart: unless-stopped
+    shm_size: 2g
 
