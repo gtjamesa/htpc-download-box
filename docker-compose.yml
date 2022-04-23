@@ -12,13 +12,13 @@ services:
       - label:disable
     ports:
       - "8112:8112" # qbittorrent
-      - "52629:52629"
-      - "52629:52629/udp"
+      - "55909:55909"
+      - "55909:55909/udp"
       - "9117:9117" # jackett
       - "5800:5800" # firefox
-    dns:
-      - 1.1.1.1
-    command: '-f "" -r 192.168.0.0/24 -r 172.0.0.0/8' # enable firewall and route local network traffic
+    command: '-f "" -r 192.168.0.0/24 -r 172.0.0.0/8 -p 55909' # enable firewall and route local network traffic
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
 
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent
