@@ -139,7 +139,7 @@ services:
       - TZ=${TZ} # timezone, defined in .env
       - KEEP_APP_RUNNING=1
     volumes:
-      - ${ROOT}/config/bazarr:/config:rw
+      - ${ROOT}/config/firefox:/config:rw
 #    ports:
 #      - "5800:5800"
     depends_on:
