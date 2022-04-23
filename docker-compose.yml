@@ -16,7 +16,7 @@ services:
       - "55909:55909/udp"
       - "9117:9117" # jackett
       - "5800:5800" # firefox
-    command: '-f "" -r 192.168.0.0/24 -r 172.0.0.0/8 -p 55909' # enable firewall and route local network traffic
+    command: '-f "" -r 192.168.0.0/16 -r 172.0.0.0/8 -p 55909' # enable firewall and route local network traffic
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=0
 
