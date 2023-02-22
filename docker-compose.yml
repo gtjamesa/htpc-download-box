@@ -4,7 +4,7 @@ services:
     image: dperson/openvpn-client:latest
     cap_add:
       - net_admin # required to modify network interfaces
-    restart: unless-stopped
+    restart: always
     volumes:
       - /dev/net:/dev/net:z # tun device
       - ${ROOT}/config/vpn:/vpn # OpenVPN configuration
@@ -21,7 +21,10 @@ services:
       - net.ipv6.conf.all.disable_ipv6=0
 
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:14.3.9.99202110311443-7435-01519b5e7ubuntu20.04.1-ls162
+    image: gtjamesa/qbittorrent
+    build:
+      context: .docker/vuetorrent
+      dockerfile: Dockerfile
     network_mode: service:vpn # run through vpn
     environment:
       - PUID=1000
@@ -33,12 +36,12 @@ services:
       - ${MEDIA_ROOT}/downloads:/downloads
     depends_on:
       - vpn
-    restart: unless-stopped
+    restart: always
 
   jackett:
     image: linuxserver/jackett:latest
     network_mode: service:vpn # run through vpn
-    restart: unless-stopped
+    restart: always
 #    ports:
 #      - "9117:9117"
     environment:
@@ -52,7 +55,7 @@ services:
 
   sonarr:
     image: linuxserver/sonarr:latest
-    restart: unless-stopped
+    restart: always
     ports:
       - "8989:8989"
     environment:
@@ -67,7 +70,7 @@ services:
 
   radarr:
     image: linuxserver/radarr:latest
-    restart: unless-stopped
+    restart: always
     ports:
       - "7878:7878"
     environment:
@@ -82,7 +85,7 @@ services:
 
 #  plex-server:
 #    image: plexinc/pms-docker:latest
-#    restart: unless-stopped
+#    restart: always
 #    environment:
 #      - TZ=${TZ} # timezone, defined in .env
 #    network_mode: host
@@ -93,7 +96,7 @@ services:
 
   bazarr:
     image: linuxserver/bazarr
-    restart: unless-stopped
+    restart: always
     environment:
       - PUID=${PUID} # default user id, defined in .env
       - PGID=${PGID} # default group id, defined in .env
@@ -118,7 +121,7 @@ services:
       - ${ROOT}/config/organizr:/config
     ports:
       - "8789:80"
-    restart: unless-stopped
+    restart: always
 
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
@@ -128,7 +131,7 @@ services:
       - TZ=${TZ} # timezone, defined in .env
     ports:
       - "8191:8191"
-    restart: unless-stopped
+    restart: always
 
   firefox:
     image: jlesage/firefox:v1.17.1
@@ -144,6 +147,6 @@ services:
 #      - "5800:5800"
     depends_on:
       - vpn
-    restart: unless-stopped
+    restart: always
     shm_size: 2g
 
