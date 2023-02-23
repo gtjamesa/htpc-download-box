@@ -39,7 +39,7 @@ services:
     restart: always
 
   jackett:
-    image: linuxserver/jackett:latest
+    image: linuxserver/jackett:0.20.3269
     network_mode: service:vpn # run through vpn
     restart: always
 #    ports:
