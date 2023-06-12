@@ -41,7 +41,7 @@ services:
     restart: always
 
   jackett:
-    image: linuxserver/jackett:0.20.3269
+    image: linuxserver/jackett:0.21.90
     network_mode: service:vpn # run through vpn
     restart: always
 #    ports:
@@ -56,7 +56,7 @@ services:
       - ${ROOT}/config/jackett:/config # config files
 
   sonarr:
-    image: linuxserver/sonarr:latest
+    image: linuxserver/sonarr:3.0.10
     restart: always
     ports:
       - "8989:8989"
@@ -71,7 +71,7 @@ services:
       - ${MEDIA_ROOT}/downloads:/downloads # download folder
 
   radarr:
-    image: linuxserver/radarr:latest
+    image: linuxserver/radarr:4.5.2
     restart: always
     ports:
       - "7878:7878"
@@ -97,7 +97,7 @@ services:
 #      - ${MEDIA_ROOT}/complete:/data # media library
 
   bazarr:
-    image: linuxserver/bazarr
+    image: linuxserver/bazarr:1.2.1
     restart: always
     environment:
       - PUID=${PUID} # default user id, defined in .env
@@ -126,7 +126,7 @@ services:
     restart: always
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:v3.2.1
     environment:
       - PUID=${PUID} # default user id, defined in .env
       - PGID=${PGID} # default group id, defined in .env
