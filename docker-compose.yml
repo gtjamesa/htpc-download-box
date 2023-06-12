@@ -136,7 +136,7 @@ services:
     restart: always
 
   firefox:
-    image: jlesage/firefox:v1.17.1
+    image: jlesage/firefox:v23.05.2
     network_mode: service:vpn # run through vpn
     environment:
       - USER_ID=${PUID} # default user id, defined in .env
