@@ -1,4 +1,4 @@
-FROM lscr.io/linuxserver/qbittorrent:4.5.5
+FROM lscr.io/linuxserver/qbittorrent:4.6.0
 
 ARG VUETORRENT_PATH="/opt"
 ARG VUETORRENT_VERSION="1.5.10"
