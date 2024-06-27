@@ -3,7 +3,7 @@ services:
   vpn:
     image: dperson/openvpn-client:latest
     cap_add:
-      - net_admin # required to modify network interfaces
+      - NET_ADMIN # required to modify network interfaces
     restart: always
     volumes:
       - /dev/net:/dev/net:z # tun device
