@@ -1,34 +1,25 @@
 version: "3.4"
 services:
   vpn:
-    image: lscr.io/linuxserver/wireguard:latest
-    container_name: vpn
+    image: dperson/openvpn-client:latest
     cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
-      - INTERNAL_SUBNET=10.13.13.0
-      - ALLOWEDIPS=0.0.0.0/0
+      - NET_ADMIN # required to modify network interfaces
+    restart: always
     volumes:
-      - ${ROOT}/config/wireguard:/config
-      - /lib/modules:/lib/modules
+      - /dev/net:/dev/net:z # tun device
+      - ${ROOT}/config/vpn:/vpn # OpenVPN configuration
+    security_opt:
+      - label:disable
     ports:
-      - "51820:51820/udp"
       - "8112:8112" # qbittorrent
       - "55909:55909"
       - "55909:55909/udp"
       - "9117:9117" # jackett
       - "5800:5800" # firefox
       - "8191:8191" # flaresolverr
+    command: '-f "" -r 192.168.0.0/16 -r 172.0.0.0/8 -p 55909' # enable firewall and route local network traffic
     sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-    security_opt:
-      - label:disable
-    restart: always
-    # command: '-f "" -r 192.168.0.0/16 -r 172.0.0.0/8 -p 55909' # enable firewall and route local network traffic
+      - net.ipv6.conf.all.disable_ipv6=0
 
   qbittorrent:
     image: gtjamesa/qbittorrent
