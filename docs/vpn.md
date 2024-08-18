@@ -32,3 +32,4 @@ Also ensure that Docker is configured to use a different subnet in `/etc/docker/
 
 - https://www.linuxserver.io/blog/routing-docker-host-and-container-traffic-through-wireguard
 - https://mullvad.net/en/help/easy-wireguard-mullvad-setup-linux
+- https://old.reddit.com/r/linuxquestions/comments/7po3qd/checking_for_dns_leaks_on_the_command_line/
