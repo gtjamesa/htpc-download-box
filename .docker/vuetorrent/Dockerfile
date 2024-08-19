@@ -8,6 +8,6 @@ RUN apt update -y && apt install -y jq wget curl \
     && wget "$DOWNLOAD_URL" -O /tmp/vuetorrent.zip \
     && unzip /tmp/vuetorrent.zip -d "${VUETORRENT_PATH}" \
     && rm -f /tmp/vuetorrent.zip \
-    && get autoremove -y \
-    && get purge -y --auto-remove \
+    && apt autoremove -y \
+    && apt purge -y --auto-remove \
     && rm -rf /var/lib/apt/lists/*
