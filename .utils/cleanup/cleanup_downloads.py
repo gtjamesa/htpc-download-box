@@ -5,19 +5,26 @@ qBittorrent Download Cleanup Script
 Cleans up download directories by:
 1. Removing directories not tracked by qBittorrent
 2. Removing extracted media files when archive files still exist
+3. Optionally verifying with Sonarr/Radarr that files have been imported
 """
 
 import argparse
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Optional
 import re
 
 try:
     import qbittorrentapi
 except ImportError:
     print("ERROR: qbittorrent-api not installed. Install with: pip install qbittorrent-api")
+    sys.exit(1)
+
+try:
+    import requests
+except ImportError:
+    print("ERROR: requests not installed. Install with: pip install requests")
     sys.exit(1)
 
 
@@ -81,6 +88,87 @@ def connect_qbittorrent(host: str, username: str, password: str) -> qbittorrenta
     except Exception as e:
         print(f"ERROR: Failed to connect to qBittorrent: {e}")
         sys.exit(1)
+
+
+def check_arr_connection(app_name: str, url: str, api_key: str) -> bool:
+    """Check if Sonarr/Radarr is accessible"""
+    try:
+        response = requests.get(
+            f"{url}/api/v3/system/status",
+            headers={'X-Api-Key': api_key},
+            timeout=5
+        )
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
+def check_sonarr_imported(sonarr_url: str, api_key: str, directory_name: str) -> Tuple[bool, str]:
+    """
+    Check if directory has been imported by Sonarr.
+    Returns (imported, reason) tuple.
+    """
+    try:
+        # Check history for successful imports
+        response = requests.get(
+            f"{sonarr_url}/api/v3/history",
+            headers={'X-Api-Key': api_key},
+            params={'pageSize': 1000, 'eventType': 3},  # eventType 3 = downloadFolderImported
+            timeout=10
+        )
+
+        if response.status_code != 200:
+            return (False, "Failed to query Sonarr API")
+
+        history = response.json()
+        records = history.get('records', [])
+
+        # Check if any record matches our directory
+        for record in records:
+            download_id = record.get('downloadId', '')
+            source_path = record.get('data', {}).get('droppedPath', '')
+
+            if directory_name in source_path or directory_name in download_id:
+                return (True, f"Imported by Sonarr")
+
+        return (False, "Not found in Sonarr import history")
+
+    except Exception as e:
+        return (False, f"Error checking Sonarr: {e}")
+
+
+def check_radarr_imported(radarr_url: str, api_key: str, directory_name: str) -> Tuple[bool, str]:
+    """
+    Check if directory has been imported by Radarr.
+    Returns (imported, reason) tuple.
+    """
+    try:
+        # Check history for successful imports
+        response = requests.get(
+            f"{radarr_url}/api/v3/history",
+            headers={'X-Api-Key': api_key},
+            params={'pageSize': 1000, 'eventType': 3},  # eventType 3 = downloadFolderImported
+            timeout=10
+        )
+
+        if response.status_code != 200:
+            return (False, "Failed to query Radarr API")
+
+        history = response.json()
+        records = history.get('records', [])
+
+        # Check if any record matches our directory
+        for record in records:
+            download_id = record.get('downloadId', '')
+            source_path = record.get('data', {}).get('droppedPath', '')
+
+            if directory_name in source_path or directory_name in download_id:
+                return (True, f"Imported by Radarr")
+
+        return (False, "Not found in Radarr import history")
+
+    except Exception as e:
+        return (False, f"Error checking Radarr: {e}")
 
 
 def get_qbt_directories(client: qbittorrentapi.Client) -> Set[str]:
@@ -190,9 +278,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
-  %(prog)s --dry-run                    # Show what would be deleted
-  %(prog)s                               # Interactive cleanup with prompts
-  %(prog)s --host http://localhost:8112  # Specify qBittorrent host
+  %(prog)s --dry-run                          # Show what would be deleted
+  %(prog)s --verify-import                     # Verify imports before cleanup
+  %(prog)s --host http://localhost:8112        # Specify qBittorrent host
         '''
     )
     parser.add_argument('--host', default='http://localhost:8112',
@@ -206,6 +294,18 @@ Examples:
     parser.add_argument('--dry-run', action='store_true',
                         help='Show statistics only, do not delete anything')
 
+    # Sonarr/Radarr verification
+    parser.add_argument('--verify-import', action='store_true',
+                        help='Verify files have been imported by Sonarr/Radarr before deletion')
+    parser.add_argument('--sonarr-url', default='http://localhost:8989',
+                        help='Sonarr URL (default: http://localhost:8989)')
+    parser.add_argument('--sonarr-api-key', default='',
+                        help='Sonarr API key')
+    parser.add_argument('--radarr-url', default='http://localhost:7878',
+                        help='Radarr URL (default: http://localhost:7878)')
+    parser.add_argument('--radarr-api-key', default='',
+                        help='Radarr API key')
+
     args = parser.parse_args()
 
     downloads_path = Path(args.downloads_path)
@@ -215,6 +315,8 @@ Examples:
     print("=" * 80)
     print(f"Mode: {'DRY RUN' if args.dry_run else 'CLEANUP'}")
     print(f"Downloads path: {downloads_path}")
+    if args.verify_import:
+        print(f"Import verification: ENABLED")
     print()
 
     # Connect to qBittorrent
@@ -222,6 +324,33 @@ Examples:
     client = connect_qbittorrent(args.host, args.username, args.password)
     print(f"✓ Connected to qBittorrent at {args.host}")
     print()
+
+    # Verify Sonarr/Radarr connections if needed
+    sonarr_enabled = False
+    radarr_enabled = False
+
+    if args.verify_import:
+        print("Verifying Sonarr/Radarr connections...")
+
+        if args.sonarr_api_key:
+            if check_arr_connection('Sonarr', args.sonarr_url, args.sonarr_api_key):
+                print(f"✓ Connected to Sonarr at {args.sonarr_url}")
+                sonarr_enabled = True
+            else:
+                print(f"✗ Failed to connect to Sonarr at {args.sonarr_url}")
+
+        if args.radarr_api_key:
+            if check_arr_connection('Radarr', args.radarr_url, args.radarr_api_key):
+                print(f"✓ Connected to Radarr at {args.radarr_url}")
+                radarr_enabled = True
+            else:
+                print(f"✗ Failed to connect to Radarr at {args.radarr_url}")
+
+        if not sonarr_enabled and not radarr_enabled:
+            print("WARNING: Import verification enabled but no Sonarr/Radarr connections available")
+            print("Provide --sonarr-api-key and/or --radarr-api-key")
+
+        print()
 
     # Get qBittorrent data
     print("Fetching qBittorrent torrent data...")
@@ -238,10 +367,16 @@ Examples:
 
     # Find cleanup candidates
     orphaned_dirs = []  # Directories not in qBittorrent
+    orphaned_not_imported = []  # Orphaned dirs that haven't been imported
     extracted_media = []  # Extracted media files to remove
 
     total_orphaned_size = 0
+    total_not_imported_size = 0
     total_extracted_size = 0
+
+    if args.verify_import and (sonarr_enabled or radarr_enabled):
+        print("Verifying import status...")
+        print()
 
     for disk_dir in disk_directories:
         dir_name = disk_dir.name
@@ -249,8 +384,28 @@ Examples:
         if dir_name not in qbt_directories:
             # Directory not tracked by qBittorrent
             size = get_dir_size(disk_dir)
-            orphaned_dirs.append((disk_dir, size))
-            total_orphaned_size += size
+
+            # Check if it's been imported
+            imported = False
+            reason = "Not checked"
+
+            if args.verify_import:
+                if sonarr_enabled:
+                    imported, reason = check_sonarr_imported(
+                        args.sonarr_url, args.sonarr_api_key, dir_name
+                    )
+
+                if not imported and radarr_enabled:
+                    imported, reason = check_radarr_imported(
+                        args.radarr_url, args.radarr_api_key, dir_name
+                    )
+
+            if args.verify_import and not imported:
+                orphaned_not_imported.append((disk_dir, size, reason))
+                total_not_imported_size += size
+            else:
+                orphaned_dirs.append((disk_dir, size, reason if args.verify_import else ""))
+                total_orphaned_size += size
         else:
             # Directory is tracked, check for extracted media
             qbt_files = qbt_torrent_files.get(dir_name, set())
@@ -266,14 +421,23 @@ Examples:
     print()
 
     if orphaned_dirs:
-        print(f"Orphaned directories (not in qBittorrent): {len(orphaned_dirs)}")
+        print(f"Orphaned directories (safe to delete): {len(orphaned_dirs)}")
         print(f"Total size: {format_size(total_orphaned_size)}")
         print()
-        for dir_path, size in sorted(orphaned_dirs, key=lambda x: x[1], reverse=True):
-            print(f"  [{format_size(size):>12}] {dir_path.name}")
+        for dir_path, size, reason in sorted(orphaned_dirs, key=lambda x: x[1], reverse=True):
+            reason_str = f" - {reason}" if reason else ""
+            print(f"  [{format_size(size):>12}] {dir_path.name}{reason_str}")
         print()
     else:
-        print("No orphaned directories found.")
+        print("No orphaned directories found (safe to delete).")
+        print()
+
+    if args.verify_import and orphaned_not_imported:
+        print(f"⚠ Orphaned directories (NOT IMPORTED - will be skipped): {len(orphaned_not_imported)}")
+        print(f"Total size: {format_size(total_not_imported_size)}")
+        print()
+        for dir_path, size, reason in sorted(orphaned_not_imported, key=lambda x: x[1], reverse=True):
+            print(f"  [{format_size(size):>12}] {dir_path.name} - {reason}")
         print()
 
     if extracted_media:
@@ -293,6 +457,8 @@ Examples:
 
     print("=" * 80)
     print(f"TOTAL: {total_items} items, {format_size(total_size)} can be freed")
+    if args.verify_import and orphaned_not_imported:
+        print(f"SKIPPED: {len(orphaned_not_imported)} items ({format_size(total_not_imported_size)}) - not imported")
     print("=" * 80)
     print()
 
@@ -318,7 +484,7 @@ Examples:
 
     # Delete orphaned directories
     deleted_dirs = 0
-    for dir_path, size in orphaned_dirs:
+    for dir_path, size, _ in orphaned_dirs:
         try:
             import shutil
             shutil.rmtree(dir_path)

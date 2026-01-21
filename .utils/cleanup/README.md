@@ -19,19 +19,31 @@ python cleanup_downloads.py --dry-run
 # Interactive cleanup
 python cleanup_downloads.py
 
+# Verify imports before deletion (recommended)
+python cleanup_downloads.py --verify-import --sonarr-api-key YOUR_KEY --radarr-api-key YOUR_KEY
+
 # Custom host/path
 python cleanup_downloads.py --host http://localhost:8112 --downloads-path /downloads/complete
 ```
 
 ## Options
 
+**qBittorrent:**
 - `--host` - qBittorrent API host (default: http://localhost:8112)
 - `--username` - qBittorrent username (default: admin)
 - `--password` - qBittorrent password (default: empty)
 - `--downloads-path` - Downloads directory (default: /downloads/complete)
 - `--dry-run` - Show stats only, no deletion
 
+**Import Verification:**
+- `--verify-import` - Check Sonarr/Radarr before deleting orphaned dirs
+- `--sonarr-url` - Sonarr URL (default: http://localhost:8989)
+- `--sonarr-api-key` - Sonarr API key
+- `--radarr-url` - Radarr URL (default: http://localhost:7878)
+- `--radarr-api-key` - Radarr API key
+
 ## What it does
 
 1. **Orphaned directories**: Removes dirs not tracked by qBittorrent
 2. **Extracted media**: Removes .mkv/.mp4 files extracted from .rar archives (keeps archives)
+3. **Import verification** (optional): Checks Sonarr/Radarr history to ensure files were imported before deletion
