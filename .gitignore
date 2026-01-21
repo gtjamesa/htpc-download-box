@@ -2,3 +2,6 @@
 .vagrant
 *.log
 config
+.idea
+.idea
+.idea
