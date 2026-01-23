@@ -11,6 +11,7 @@ Cleans up download directories by:
 import argparse
 import os
 import sys
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Set, Tuple, Optional
 import re
@@ -84,6 +85,99 @@ def is_archive_file(filename: str) -> bool:
     lower = filename.lower()
     return (any(lower.endswith(ext) for ext in ARCHIVE_EXTENSIONS) or
             ARCHIVE_PART_PATTERN.search(filename) is not None)
+
+
+def install_cron(script_path: str, args_list: List[str]) -> None:
+    """Install script to crontab for weekly execution"""
+    # Build the cron command
+    script_abs = os.path.abspath(script_path)
+    # Filter out --install-cron and --uninstall-cron from args
+    filtered_args = [arg for arg in args_list if arg not in ['--install-cron', '--uninstall-cron']]
+    cmd = f"{script_abs} {' '.join(filtered_args)}"
+
+    # Cron entry: Run every Sunday at 3 AM
+    cron_entry = f"0 3 * * 0 {cmd}"
+    cron_marker = f"# qbittorrent-cleanup: {script_abs}"
+
+    try:
+        # Get current crontab
+        result = subprocess.run(['crontab', '-l'], capture_output=True, text=True)
+        current_cron = result.stdout if result.returncode == 0 else ""
+
+        # Check if already installed
+        if cron_marker in current_cron:
+            print("Cron job already installed. Updating...")
+            # Remove old entry
+            lines = [line for line in current_cron.split('\n')
+                    if not (cron_marker in line or (line.startswith('0 3 * * 0') and script_abs in line))]
+            current_cron = '\n'.join(lines).strip()
+
+        # Add new entry
+        new_cron = f"{current_cron}\n{cron_marker}\n{cron_entry}\n" if current_cron else f"{cron_marker}\n{cron_entry}\n"
+
+        # Install new crontab
+        subprocess.run(['crontab', '-'], input=new_cron, text=True, check=True)
+
+        print("=" * 80)
+        print("Cron job installed successfully!")
+        print("=" * 80)
+        print(f"Schedule: Every Sunday at 3:00 AM")
+        print(f"Command: {cmd}")
+        print()
+        print("To view crontab: crontab -l")
+        print("To remove: crontab -e (then delete the lines)")
+        print(f"Or run: {script_abs} --uninstall-cron")
+        print("=" * 80)
+
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR: Failed to install cron job: {e}")
+        sys.exit(1)
+    except FileNotFoundError:
+        print("ERROR: crontab command not found. Is cron installed?")
+        sys.exit(1)
+
+
+def uninstall_cron(script_path: str) -> None:
+    """Remove script from crontab"""
+    script_abs = os.path.abspath(script_path)
+    cron_marker = f"# qbittorrent-cleanup: {script_abs}"
+
+    try:
+        # Get current crontab
+        result = subprocess.run(['crontab', '-l'], capture_output=True, text=True)
+        if result.returncode != 0:
+            print("No crontab found or crontab is empty.")
+            return
+
+        current_cron = result.stdout
+
+        # Check if installed
+        if cron_marker not in current_cron:
+            print("Cron job not found in crontab.")
+            return
+
+        # Remove entries
+        lines = [line for line in current_cron.split('\n')
+                if not (cron_marker in line or (line.startswith('0 3 * * 0') and script_abs in line))]
+        new_cron = '\n'.join(lines).strip() + '\n' if lines else ''
+
+        # Install new crontab
+        if new_cron.strip():
+            subprocess.run(['crontab', '-'], input=new_cron, text=True, check=True)
+        else:
+            # Empty crontab, remove it
+            subprocess.run(['crontab', '-r'], check=True)
+
+        print("=" * 80)
+        print("Cron job uninstalled successfully!")
+        print("=" * 80)
+
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR: Failed to uninstall cron job: {e}")
+        sys.exit(1)
+    except FileNotFoundError:
+        print("ERROR: crontab command not found. Is cron installed?")
+        sys.exit(1)
 
 
 def connect_qbittorrent(host: str, username: str, password: str) -> qbittorrentapi.Client:
@@ -286,6 +380,8 @@ Examples:
   %(prog)s --dry-run                          # Show what would be deleted
   %(prog)s --verify-import                     # Verify imports before cleanup
   %(prog)s --host http://localhost:8112        # Specify qBittorrent host
+  %(prog)s --install-cron --verify-import      # Install to crontab (weekly, Sundays 3 AM)
+  %(prog)s --uninstall-cron                    # Remove from crontab
         '''
     )
     parser.add_argument('--host', default='http://localhost:8112',
@@ -311,7 +407,22 @@ Examples:
     parser.add_argument('--radarr-api-key', default=os.getenv('RADARR_API_KEY', ''),
                         help='Radarr API key (default: $RADARR_API_KEY)')
 
+    # Cron installation
+    parser.add_argument('--install-cron', action='store_true',
+                        help='Install script to crontab for weekly execution (Sundays at 3 AM)')
+    parser.add_argument('--uninstall-cron', action='store_true',
+                        help='Remove script from crontab')
+
     args = parser.parse_args()
+
+    # Handle cron installation/uninstallation
+    if args.install_cron:
+        install_cron(sys.argv[0], sys.argv[1:])
+        return
+
+    if args.uninstall_cron:
+        uninstall_cron(sys.argv[0])
+        return
 
     downloads_path = Path(args.downloads_path)
 
