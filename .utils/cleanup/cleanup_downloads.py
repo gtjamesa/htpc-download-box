@@ -34,6 +34,13 @@ except ImportError:
     # dotenv is optional, env vars can be set manually
     pass
 
+try:
+    from tqdm import tqdm
+except ImportError:
+    # tqdm is optional, provide a simple passthrough
+    def tqdm(iterable, **kwargs):
+        return iterable
+
 
 # Media file extensions that may be extracted from archives
 MEDIA_EXTENSIONS = {'.mkv', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg'}
@@ -385,7 +392,7 @@ Examples:
         print("Verifying import status...")
         print()
 
-    for disk_dir in disk_directories:
+    for disk_dir in tqdm(disk_directories, desc="Processing directories", unit="dir"):
         dir_name = disk_dir.name
 
         if dir_name not in qbt_directories:
