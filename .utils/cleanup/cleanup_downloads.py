@@ -117,22 +117,22 @@ def check_arr_connection(app_name: str, url: str, api_key: str) -> bool:
         return False
 
 
-def check_sonarr_imported(sonarr_url: str, api_key: str, directory_name: str) -> Tuple[bool, str]:
+def check_arr_imported(app_name: str, url: str, api_key: str, directory_name: str) -> Tuple[bool, str]:
     """
-    Check if directory has been imported by Sonarr.
+    Check if directory has been imported by Sonarr/Radarr.
     Returns (imported, reason) tuple.
     """
     try:
         # Check history for successful imports
         response = requests.get(
-            f"{sonarr_url}/api/v3/history",
+            f"{url}/api/v3/history",
             headers={'X-Api-Key': api_key},
             params={'pageSize': 1000, 'eventType': 3},  # eventType 3 = downloadFolderImported
             timeout=10
         )
 
         if response.status_code != 200:
-            return (False, "Failed to query Sonarr API")
+            return (False, f"Failed to query {app_name} API")
 
         history = response.json()
         records = history.get('records', [])
@@ -143,46 +143,37 @@ def check_sonarr_imported(sonarr_url: str, api_key: str, directory_name: str) ->
             source_path = record.get('data', {}).get('droppedPath', '')
 
             if directory_name in source_path or directory_name in download_id:
-                return (True, f"Imported by Sonarr")
+                return (True, f"Imported by {app_name}")
 
-        return (False, "Not found in Sonarr import history")
+        return (False, f"Not found in {app_name} import history")
 
     except Exception as e:
-        return (False, f"Error checking Sonarr: {e}")
+        return (False, f"Error checking {app_name}: {e}")
 
 
-def check_radarr_imported(radarr_url: str, api_key: str, directory_name: str) -> Tuple[bool, str]:
+def verify_import_status(
+    directory_name: str,
+    sonarr_enabled: bool,
+    sonarr_url: str,
+    sonarr_api_key: str,
+    radarr_enabled: bool,
+    radarr_url: str,
+    radarr_api_key: str
+) -> Tuple[bool, str]:
     """
-    Check if directory has been imported by Radarr.
+    Check if directory has been imported by Sonarr or Radarr.
     Returns (imported, reason) tuple.
     """
-    try:
-        # Check history for successful imports
-        response = requests.get(
-            f"{radarr_url}/api/v3/history",
-            headers={'X-Api-Key': api_key},
-            params={'pageSize': 1000, 'eventType': 3},  # eventType 3 = downloadFolderImported
-            timeout=10
-        )
+    imported = False
+    reason = "Not checked"
 
-        if response.status_code != 200:
-            return (False, "Failed to query Radarr API")
+    if sonarr_enabled:
+        imported, reason = check_arr_imported('Sonarr', sonarr_url, sonarr_api_key, directory_name)
 
-        history = response.json()
-        records = history.get('records', [])
+    if not imported and radarr_enabled:
+        imported, reason = check_arr_imported('Radarr', radarr_url, radarr_api_key, directory_name)
 
-        # Check if any record matches our directory
-        for record in records:
-            download_id = record.get('downloadId', '')
-            source_path = record.get('data', {}).get('droppedPath', '')
-
-            if directory_name in source_path or directory_name in download_id:
-                return (True, f"Imported by Radarr")
-
-        return (False, "Not found in Radarr import history")
-
-    except Exception as e:
-        return (False, f"Error checking Radarr: {e}")
+    return imported, reason
 
 
 def get_qbt_directories(client: qbittorrentapi.Client) -> Set[str]:
@@ -383,10 +374,12 @@ Examples:
     orphaned_dirs = []  # Directories not in qBittorrent
     orphaned_not_imported = []  # Orphaned dirs that haven't been imported
     extracted_media = []  # Extracted media files to remove
+    extracted_not_imported = []  # Extracted media that hasn't been imported
 
     total_orphaned_size = 0
     total_not_imported_size = 0
     total_extracted_size = 0
+    total_extracted_not_imported_size = 0
 
     if args.verify_import and (sonarr_enabled or radarr_enabled):
         print("Verifying import status...")
@@ -400,19 +393,14 @@ Examples:
             size = get_dir_size(disk_dir)
 
             # Check if it's been imported
-            imported = False
-            reason = "Not checked"
-
             if args.verify_import:
-                if sonarr_enabled:
-                    imported, reason = check_sonarr_imported(
-                        args.sonarr_url, args.sonarr_api_key, dir_name
-                    )
-
-                if not imported and radarr_enabled:
-                    imported, reason = check_radarr_imported(
-                        args.radarr_url, args.radarr_api_key, dir_name
-                    )
+                imported, reason = verify_import_status(
+                    dir_name, sonarr_enabled, args.sonarr_url, args.sonarr_api_key,
+                    radarr_enabled, args.radarr_url, args.radarr_api_key
+                )
+            else:
+                imported = True
+                reason = "Not checked"
 
             if args.verify_import and not imported:
                 orphaned_not_imported.append((disk_dir, size, reason))
@@ -425,8 +413,23 @@ Examples:
             qbt_files = qbt_torrent_files.get(dir_name, set())
             extracted = find_extracted_media(disk_dir, qbt_files)
             if extracted:
-                extracted_media.extend(extracted)
-                total_extracted_size += sum(size for _, size in extracted)
+                # Check if directory has been imported (for extracted media verification)
+                if args.verify_import:
+                    imported, reason = verify_import_status(
+                        dir_name, sonarr_enabled, args.sonarr_url, args.sonarr_api_key,
+                        radarr_enabled, args.radarr_url, args.radarr_api_key
+                    )
+                else:
+                    imported = True
+
+                if args.verify_import and not imported:
+                    # Extracted media from directory that hasn't been imported - skip
+                    extracted_not_imported.extend(extracted)
+                    total_extracted_not_imported_size += sum(size for _, size in extracted)
+                else:
+                    # Safe to delete
+                    extracted_media.extend(extracted)
+                    total_extracted_size += sum(size for _, size in extracted)
 
     # Display statistics
     print("=" * 80)
@@ -455,7 +458,7 @@ Examples:
         print()
 
     if extracted_media:
-        print(f"Extracted media files: {len(extracted_media)}")
+        print(f"Extracted media files (safe to delete): {len(extracted_media)}")
         print(f"Total size: {format_size(total_extracted_size)}")
         print()
         for file_path, size in sorted(extracted_media, key=lambda x: x[1], reverse=True):
@@ -463,7 +466,16 @@ Examples:
             print(f"  [{format_size(size):>12}] {rel_path}")
         print()
     else:
-        print("No extracted media files found.")
+        print("No extracted media files found (safe to delete).")
+        print()
+
+    if args.verify_import and extracted_not_imported:
+        print(f"⚠ Extracted media files (NOT IMPORTED - will be skipped): {len(extracted_not_imported)}")
+        print(f"Total size: {format_size(total_extracted_not_imported_size)}")
+        print()
+        for file_path, size in sorted(extracted_not_imported, key=lambda x: x[1], reverse=True):
+            rel_path = file_path.relative_to(downloads_path)
+            print(f"  [{format_size(size):>12}] {rel_path}")
         print()
 
     total_size = total_orphaned_size + total_extracted_size
@@ -471,8 +483,10 @@ Examples:
 
     print("=" * 80)
     print(f"TOTAL: {total_items} items, {format_size(total_size)} can be freed")
-    if args.verify_import and orphaned_not_imported:
-        print(f"SKIPPED: {len(orphaned_not_imported)} items ({format_size(total_not_imported_size)}) - not imported")
+    if args.verify_import and (orphaned_not_imported or extracted_not_imported):
+        skipped_count = len(orphaned_not_imported) + len(extracted_not_imported)
+        skipped_size = total_not_imported_size + total_extracted_not_imported_size
+        print(f"SKIPPED: {skipped_count} items ({format_size(skipped_size)}) - not imported")
     print("=" * 80)
     print()
 
