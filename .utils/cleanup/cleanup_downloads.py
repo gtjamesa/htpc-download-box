@@ -384,26 +384,26 @@ Examples:
   %(prog)s --uninstall-cron                    # Remove from crontab
         '''
     )
-    parser.add_argument('--host', default='http://localhost:8112',
-                        help='qBittorrent host (default: http://localhost:8112)')
-    parser.add_argument('--username', default='admin',
-                        help='qBittorrent username (default: admin)')
-    parser.add_argument('--password', default='',
-                        help='qBittorrent password (default: empty)')
-    parser.add_argument('--downloads-path', default='/downloads/complete',
-                        help='Downloads directory path (default: /downloads/complete)')
+    parser.add_argument('--host', default=os.getenv('QBITTORRENT_HOST', 'http://localhost:8112'),
+                        help='qBittorrent host (default: $QBITTORRENT_HOST or http://localhost:8112)')
+    parser.add_argument('--username', default=os.getenv('QBITTORRENT_USERNAME', 'admin'),
+                        help='qBittorrent username (default: $QBITTORRENT_USERNAME or admin)')
+    parser.add_argument('--password', default=os.getenv('QBITTORRENT_PASSWORD', ''),
+                        help='qBittorrent password (default: $QBITTORRENT_PASSWORD or empty)')
+    parser.add_argument('--downloads-path', default=os.getenv('DOWNLOADS_PATH', '/downloads/complete'),
+                        help='Downloads directory path (default: $DOWNLOADS_PATH or /downloads/complete)')
     parser.add_argument('--dry-run', action='store_true',
                         help='Show statistics only, do not delete anything')
 
     # Sonarr/Radarr verification
     parser.add_argument('--verify-import', action='store_true',
                         help='Verify files have been imported by Sonarr/Radarr before deletion')
-    parser.add_argument('--sonarr-url', default='http://localhost:8989',
-                        help='Sonarr URL (default: http://localhost:8989)')
+    parser.add_argument('--sonarr-url', default=os.getenv('SONARR_URL', 'http://localhost:8989'),
+                        help='Sonarr URL (default: $SONARR_URL or http://localhost:8989)')
     parser.add_argument('--sonarr-api-key', default=os.getenv('SONARR_API_KEY', ''),
                         help='Sonarr API key (default: $SONARR_API_KEY)')
-    parser.add_argument('--radarr-url', default='http://localhost:7878',
-                        help='Radarr URL (default: http://localhost:7878)')
+    parser.add_argument('--radarr-url', default=os.getenv('RADARR_URL', 'http://localhost:7878'),
+                        help='Radarr URL (default: $RADARR_URL or http://localhost:7878)')
     parser.add_argument('--radarr-api-key', default=os.getenv('RADARR_API_KEY', ''),
                         help='Radarr API key (default: $RADARR_API_KEY)')
 

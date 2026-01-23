@@ -35,17 +35,17 @@ python cleanup_downloads.py --uninstall-cron
 ## Options
 
 **qBittorrent:**
-- `--host` - qBittorrent API host (default: http://localhost:8112)
-- `--username` - qBittorrent username (default: admin)
-- `--password` - qBittorrent password (default: empty)
-- `--downloads-path` - Downloads directory (default: /downloads/complete)
+- `--host` - qBittorrent API host (or env: QBITTORRENT_HOST, default: http://localhost:8112)
+- `--username` - qBittorrent username (or env: QBITTORRENT_USERNAME, default: admin)
+- `--password` - qBittorrent password (or env: QBITTORRENT_PASSWORD, default: empty)
+- `--downloads-path` - Downloads directory (or env: DOWNLOADS_PATH, default: /downloads/complete)
 - `--dry-run` - Show stats only, no deletion
 
 **Import Verification:**
 - `--verify-import` - Check Sonarr/Radarr before deleting orphaned dirs
-- `--sonarr-url` - Sonarr URL (default: http://localhost:8989)
+- `--sonarr-url` - Sonarr URL (or env: SONARR_URL, default: http://localhost:8989)
 - `--sonarr-api-key` - Sonarr API key (or env: SONARR_API_KEY)
-- `--radarr-url` - Radarr URL (default: http://localhost:7878)
+- `--radarr-url` - Radarr URL (or env: RADARR_URL, default: http://localhost:7878)
 - `--radarr-api-key` - Radarr API key (or env: RADARR_API_KEY)
 
 **Automation:**
