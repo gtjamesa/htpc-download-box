@@ -27,6 +27,13 @@ except ImportError:
     print("ERROR: requests not installed. Install with: pip install requests")
     sys.exit(1)
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # dotenv is optional, env vars can be set manually
+    pass
+
 
 # Media file extensions that may be extracted from archives
 MEDIA_EXTENSIONS = {'.mkv', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg'}
@@ -299,12 +306,12 @@ Examples:
                         help='Verify files have been imported by Sonarr/Radarr before deletion')
     parser.add_argument('--sonarr-url', default='http://localhost:8989',
                         help='Sonarr URL (default: http://localhost:8989)')
-    parser.add_argument('--sonarr-api-key', default='',
-                        help='Sonarr API key')
+    parser.add_argument('--sonarr-api-key', default=os.getenv('SONARR_API_KEY', ''),
+                        help='Sonarr API key (default: $SONARR_API_KEY)')
     parser.add_argument('--radarr-url', default='http://localhost:7878',
                         help='Radarr URL (default: http://localhost:7878)')
-    parser.add_argument('--radarr-api-key', default='',
-                        help='Radarr API key')
+    parser.add_argument('--radarr-api-key', default=os.getenv('RADARR_API_KEY', ''),
+                        help='Radarr API key (default: $RADARR_API_KEY)')
 
     args = parser.parse_args()
 
