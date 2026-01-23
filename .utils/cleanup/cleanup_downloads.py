@@ -29,8 +29,9 @@ except ImportError:
     sys.exit(1)
 
 try:
-    from dotenv import load_dotenv
-    load_dotenv()
+    from dotenv import load_dotenv, find_dotenv
+    # Search for .env in current dir and parent dirs
+    load_dotenv(find_dotenv(usecwd=True))
 except ImportError:
     # dotenv is optional, env vars can be set manually
     pass
